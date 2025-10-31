@@ -74,6 +74,7 @@ pipeline {
         node {
           echo "🧹 Cleaning up temporary files..."
           sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* || true'
+        }
       }
     }
     failure {
