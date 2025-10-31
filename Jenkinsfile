@@ -2,11 +2,17 @@ pipeline {
   agent any
 
   environment {
-    TERRAFORM_VERSION = '1.10.4'
-    K8S_VERSION = '1.30.2'
+    TERRAFORM_VERSION = '1.13.4'
     HELM_VERSION = '3.16.0'
+    K8S_VERSION = '1.30.2'
     BIN_DIR = "${WORKSPACE}/bin"
     PATH = "${BIN_DIR}:${env.PATH}"
+
+    OCI_TENANCY_OCID    = credentials('oci_tenancy_ocid')
+    OCI_USER_OCID       = credentials('oci_user_ocid')
+    OCI_FINGERPRINT     = credentials('oci_fingerprint')
+    OCI_PRIVATE_KEY_PATH = credentials('oci_private_key_path')
+    OCI_REGION          = 'us-ashburn-1'
   }
 
   stages {
@@ -19,7 +25,6 @@ pipeline {
     stage('Lab Setup') {
       steps {
         script {
-          echo "🔧 Starting lab environment setup..."
           def deploy = load "jenkins/deploy-pipeline.groovy"
           deploy.setupLab(env.TERRAFORM_VERSION, env.HELM_VERSION, env.K8S_VERSION)
         }

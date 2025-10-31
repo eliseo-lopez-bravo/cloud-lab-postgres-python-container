@@ -1,60 +1,53 @@
 def setupLab(terraformVersion, helmVersion, k8sVersion) {
+    echo "🔧 Installing Terraform ${terraformVersion}, Helm ${helmVersion}, and Kubernetes ${k8sVersion}"
+
     sh """
-      set -e
-      echo "📦 Preparing environment directories..."
-      mkdir -p ${env.BIN_DIR}
+      mkdir -p \$BIN_DIR
+      curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_linux_amd64.zip
+      unzip -o /tmp/terraform.zip -d \$BIN_DIR
 
-      echo "📐 Detecting architecture..."
-      ARCH=\$(uname -m)
-      case "\$ARCH" in
-        x86_64) TF_ARCH=amd64; K8S_ARCH=amd64; HELM_ARCH=amd64 ;;
-        aarch64) TF_ARCH=arm64; K8S_ARCH=arm64; HELM_ARCH=arm64 ;;
-        *) echo "❌ Unsupported architecture: \$ARCH"; exit 1 ;;
-      esac
-
-      echo "⬇️ Installing Terraform v${terraformVersion}..."
-      curl -fsSL https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_linux_\${TF_ARCH}.zip -o /tmp/terraform.zip
-      unzip -o /tmp/terraform.zip -d ${env.BIN_DIR}
-      chmod +x ${env.BIN_DIR}/terraform
-      ${env.BIN_DIR}/terraform version
-
-      echo "⬇️ Installing Helm v${helmVersion}..."
-      curl -fsSL https://get.helm.sh/helm-v${helmVersion}-linux-\${HELM_ARCH}.tar.gz -o /tmp/helm.tar.gz
+      curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v${helmVersion}-linux-amd64.tar.gz
       tar -xzf /tmp/helm.tar.gz -C /tmp
-      mv /tmp/linux-\${HELM_ARCH}/helm ${env.BIN_DIR}/helm
-      chmod +x ${env.BIN_DIR}/helm
-      ${env.BIN_DIR}/helm version
+      mv /tmp/linux-amd64/helm \$BIN_DIR/
     """
 }
 
 def initTerraform() {
+    echo "🚀 Initializing Terraform..."
+
     sh """
-      echo "🚀 Initializing Terraform..."
-      cd ${env.WORKSPACE}/terraform
+      cd terraform
+      export TF_VAR_tenancy_ocid=$OCI_TENANCY_OCID
+      export TF_VAR_user_ocid=$OCI_USER_OCID
+      export TF_VAR_fingerprint=$OCI_FINGERPRINT
+      export TF_VAR_private_key_path=$OCI_PRIVATE_KEY_PATH
+      export TF_VAR_region=$OCI_REGION
+
       terraform init -input=false
     """
 }
 
 def planTerraform() {
+    echo "📋 Running Terraform plan..."
     sh """
-      echo "🧠 Running Terraform plan..."
-      cd ${env.WORKSPACE}/terraform
-      terraform plan -out=tfplan
+      cd terraform
+      terraform plan -out=tfplan -input=false
     """
 }
 
 def applyTerraform() {
+    echo "🚢 Applying Terraform..."
     sh """
-      echo "⚙️ Applying Terraform..."
-      cd ${env.WORKSPACE}/terraform
+      cd terraform
       terraform apply -auto-approve tfplan
     """
 }
 
 def verifySetup() {
+    echo "✅ Verifying Lab setup..."
     sh """
-      echo "✅ Verifying deployment..."
-      kubectl get pods -A || echo '⚠️ Kubernetes not configured yet'
+      cd terraform
+      terraform output
     """
 }
 
