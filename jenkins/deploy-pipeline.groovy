@@ -1,17 +1,22 @@
 def setupLab(terraformVersion, helmVersion, k8sVersion) {
-    echo "🔧 Installing Terraform ${terraformVersion}, Helm ${helmVersion}, and Kubernetes ${k8sVersion}"
+  echo "🔧 Installing Terraform ${terraformVersion}, Helm ${helmVersion}, and Kubernetes ${k8sVersion}"
 
-    sh """
-      mkdir -p \$BIN_DIR
-      curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_linux_arm64.zip
-      unzip -o /tmp/terraform.zip -d \$BIN_DIR
+  def binDir = env.BIN_DIR  // ✅ fix — read from Jenkins environment
 
-      curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v${helmVersion}-linux-arm64.tar.gz
-      tar -xzf /tmp/helm.tar.gz -C /tmp
-      mv /tmp/linux-arm64/helm ${binDir}/
+  sh """
+    mkdir -p ${binDir}
+    curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_linux_arm64.zip
+    unzip -o /tmp/terraform.zip -d ${binDir}
 
-    """
+    arch=\$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/')
+    curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v${helmVersion}-linux-\${arch}.tar.gz
+    tar -xzf /tmp/helm.tar.gz -C /tmp
+    mv /tmp/linux-\${arch}/helm ${binDir}/
+
+    echo "✅ Terraform, Helm installed in ${binDir}"
+  """
 }
+
 
 def initTerraform() {
     echo "🚀 Initializing Terraform..."
