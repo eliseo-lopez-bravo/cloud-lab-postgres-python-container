@@ -1,3 +1,34 @@
+variable "tenancy_ocid" {
+  description = "The OCID of the tenancy"
+  type        = string
+}
+
+variable "user_ocid" {
+  description = "The OCID of the user"
+  type        = string
+}
+
+variable "fingerprint" {
+  description = "The fingerprint of the public key added to the user"
+  type        = string
+}
+
+variable "private_key_path" {
+  description = "Path to the private API key file"
+  type        = string
+}
+
+variable "region" {
+  description = "The OCI region"
+  type        = string
+  default     = "us-sanjose-1"
+}
+
+variable "compartment_ocid" {
+  description = "Compartment OCID where resources are created"
+  type        = string
+}
+
 variable "namespace" {
   description = "Kubernetes namespace for the lab"
   type        = string
