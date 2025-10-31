@@ -12,7 +12,6 @@ pipeline {
     OCI_TENANCY_OCID   = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
     OCI_USER_OCID      = 'ocid1.user.oc1..aaaaaaaaz7uge6jsrevrqjdlyn7srl77oganptjtf7mft75l7gxb4spaibma'
     OCI_FINGERPRINT    = '6f:a7:6e:df:52:3d:29:ca:1d:2b:61:00:c2:ef:42:d1'
-    OCI_PRIVATE_KEY    = '/var/lib/jenkins/.oci/oci_api_key.pem'
   }
 
   stages {
@@ -25,6 +24,7 @@ pipeline {
     stage('Lab Setup') {
       steps {
         script {
+          echo "🔧 Setting up lab environment..."
           def deploy = load "jenkins/deploy-pipeline.groovy"
           deploy.setupLab(env.TERRAFORM_VERSION, env.HELM_VERSION, env.K8S_VERSION)
         }
@@ -33,27 +33,42 @@ pipeline {
 
     stage('Terraform Init') {
       steps {
-        script {
-          def deploy = load "jenkins/deploy-pipeline.groovy"
-          deploy.initTerraform()
+        withCredentials([file(credentialsId: 'oci-private-key', variable: 'OCI_PRIVATE_KEY_PATH')]) {
+          script {
+            echo "🚀 Initializing Terraform..."
+            env.OCI_PRIVATE_KEY_PATH = "${OCI_PRIVATE_KEY_PATH}"
+
+            def deploy = load "jenkins/deploy-pipeline.groovy"
+            deploy.initTerraform()
+          }
         }
       }
     }
 
     stage('Terraform Plan') {
       steps {
-        script {
-          def deploy = load "jenkins/deploy-pipeline.groovy"
-          deploy.planTerraform()
+        withCredentials([file(credentialsId: 'oci-private-key', variable: 'OCI_PRIVATE_KEY_PATH')]) {
+          script {
+            echo "📜 Running Terraform plan..."
+            env.OCI_PRIVATE_KEY_PATH = "${OCI_PRIVATE_KEY_PATH}"
+
+            def deploy = load "jenkins/deploy-pipeline.groovy"
+            deploy.planTerraform()
+          }
         }
       }
     }
 
     stage('Terraform Apply') {
       steps {
-        script {
-          def deploy = load "jenkins/deploy-pipeline.groovy"
-          deploy.applyTerraform()
+        withCredentials([file(credentialsId: 'oci-private-key', variable: 'OCI_PRIVATE_KEY_PATH')]) {
+          script {
+            echo "🧱 Applying Terraform..."
+            env.OCI_PRIVATE_KEY_PATH = "${OCI_PRIVATE_KEY_PATH}"
+
+            def deploy = load "jenkins/deploy-pipeline.groovy"
+            deploy.applyTerraform()
+          }
         }
       }
     }
@@ -73,7 +88,7 @@ pipeline {
       script {
         node {
           echo "🧹 Cleaning up temporary files..."
-          sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* || true'
+          sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* /tmp/linux-amd64 || true'
         }
       }
     }
