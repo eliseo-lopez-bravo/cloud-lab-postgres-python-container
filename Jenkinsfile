@@ -8,11 +8,11 @@ pipeline {
     BIN_DIR = "${WORKSPACE}/bin"
     PATH = "${BIN_DIR}:${env.PATH}"
 
-    OCI_TENANCY_OCID    = credentials('oci_tenancy_ocid')
-    OCI_USER_OCID       = credentials('oci_user_ocid')
-    OCI_FINGERPRINT     = credentials('oci_fingerprint')
-    OCI_PRIVATE_KEY_PATH = credentials('oci_private_key_path')
-    OCI_REGION          = 'us-ashburn-1'
+    OCI_REGION         = 'us-sanjose-1'
+    OCI_TENANCY_OCID   = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
+    OCI_USER_OCID      = 'ocid1.user.oc1..aaaaaaaaz7uge6jsrevrqjdlyn7srl77oganptjtf7mft75l7gxb4spaibma'
+    OCI_FINGERPRINT    = '6f:a7:6e:df:52:3d:29:ca:1d:2b:61:00:c2:ef:42:d1'
+    OCI_PRIVATE_KEY    = credentials('oci_private_key')
   }
 
   stages {
