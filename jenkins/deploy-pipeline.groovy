@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        TF_VERSION = "1.8.5"  // you can adjust version
-        TF_BIN = "/usr/local/bin/terraform"
+        TF_VERSION = "1.10.4"
+        TF_DIR = "${env.WORKSPACE}/bin"
+        PATH = "${env.TF_DIR}:${env.PATH}"
     }
 
     stages {
@@ -12,13 +13,14 @@ pipeline {
                 script {
                     echo "=== Checking Terraform installation ==="
                     sh '''
+                    mkdir -p ${TF_DIR}
                     if ! command -v terraform >/dev/null 2>&1; then
-                        echo "Terraform not found — installing..."
-                        sudo yum install -y unzip curl || sudo apt-get install -y unzip curl
+                        echo "Terraform not found — installing locally..."
                         curl -fsSL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip -o /tmp/terraform.zip
-                        sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
+                        unzip -o /tmp/terraform.zip -d ${TF_DIR}
                         rm -f /tmp/terraform.zip
-                        terraform version
+                        chmod +x ${TF_DIR}/terraform
+                        ${TF_DIR}/terraform version
                     else
                         echo "Terraform is already installed:"
                         terraform version
@@ -50,7 +52,7 @@ pipeline {
             }
             steps {
                 sh 'echo "Deploying PostgreSQL to Kubernetes..."'
-                // Add your kubectl apply -f manifest.yaml or helm commands here
+                // Add your kubectl or helm commands here
             }
         }
     }
