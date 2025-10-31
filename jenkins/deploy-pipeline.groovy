@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        TF_VERSION = "1.10.4"
+        TF_VERSION = "1.13.4"
         KUBECTL_VERSION = "v1.31.0"
         HELM_VERSION = "v3.16.2"
         BIN_DIR = "${WORKSPACE}/bin"
