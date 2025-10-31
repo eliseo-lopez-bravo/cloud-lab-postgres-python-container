@@ -1,38 +1,57 @@
 pipeline {
-  agent any
-  parameters {
-    string(name: 'IMAGE_TAG', defaultValue: '', description: 'Image tag e.g. ghcr.io/eliseo-lopez-bravo/fastapi-anom:sha')
-  }
-  stages {
-    stage('Terraform Apply') {
-      steps {
-        dir('infra') {
-          sh 'terraform init -input=false || true'
-          sh 'terraform apply -auto-approve -input=false'
-        }
-      }
+    agent any
+
+    environment {
+        TF_VERSION = "1.8.5"  // you can adjust version
+        TF_BIN = "/usr/local/bin/terraform"
     }
-    stage('Deploy Postgres (k8s manifest)') {
-      steps {
-        dir('k8s/postgres') {
-          sh 'kubectl apply -f pg-secret.yaml -n infra || true'
-          sh 'kubectl apply -f postgres-statefulset.yaml -n infra || true'
-          sh 'kubectl apply -f postgres-service-clusterip.yaml -n infra || true'
+
+    stages {
+        stage('Lab Setup') {
+            steps {
+                script {
+                    echo "=== Checking Terraform installation ==="
+                    sh '''
+                    if ! command -v terraform >/dev/null 2>&1; then
+                        echo "Terraform not found — installing..."
+                        sudo yum install -y unzip curl || sudo apt-get install -y unzip curl
+                        curl -fsSL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip -o /tmp/terraform.zip
+                        sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
+                        rm -f /tmp/terraform.zip
+                        terraform version
+                    else
+                        echo "Terraform is already installed:"
+                        terraform version
+                    fi
+                    '''
+                }
+            }
         }
-      }
-    }
-    stage('Deploy App') {
-      steps {
-        dir('k8s') {
-          sh '''
-            kubectl apply -f namespaces.yaml || true
-            kubectl apply -f fastapi-deployment.yaml -n app || true
-            kubectl apply -f fastapi-service.yaml -n app || true
-            kubectl apply -f ingress-fastapi.yaml -n app || true
-            kubectl set image deployment/fastapi fastapi=${IMAGE_TAG} -n app || true
-          '''
+
+        stage('Init Terraform') {
+            steps {
+                dir('infra') {
+                    sh 'terraform init -input=false'
+                }
+            }
         }
-      }
+
+        stage('Apply Terraform') {
+            steps {
+                dir('infra') {
+                    sh 'terraform apply -auto-approve -input=false'
+                }
+            }
+        }
+
+        stage('Deploy Postgres (k8s manifest)') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                sh 'echo "Deploying PostgreSQL to Kubernetes..."'
+                // Add your kubectl apply -f manifest.yaml or helm commands here
+            }
+        }
     }
-  }
 }
