@@ -8,7 +8,8 @@ def setupLab(terraformVersion, helmVersion, k8sVersion) {
 
       curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v${helmVersion}-linux-arm64.tar.gz
       tar -xzf /tmp/helm.tar.gz -C /tmp
-      mv /tmp/linux-amd64/helm \$BIN_DIR/
+      mv /tmp/linux-arm64/helm ${binDir}/
+
     """
 }
 
