@@ -1,0 +1,45 @@
+name: CI Build & Push
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Install deps & run tests
+        working-directory: app
+        run: |
+          pip install -r requirements.txt
+          # pytest -q
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and push
+        working-directory: .
+        run: |
+          IMAGE=ghcr.io/eliseo-lopez-bravo/fastapi-anom:${{ github.sha }}
+          docker build -t $IMAGE -f docker/Dockerfile .
+          docker push $IMAGE
+      - name: Upload image tag artifact
+        run: echo "IMAGE=ghcr.io/eliseo-lopez-bravo/fastapi-anom:${{ github.sha }}" > image.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-tag
+          path: image.txt

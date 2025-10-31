@@ -1,0 +1,9 @@
+---
+- name: Base Ansible setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure Python3 is installed
+      apt:
+        name: python3
+        state: present
