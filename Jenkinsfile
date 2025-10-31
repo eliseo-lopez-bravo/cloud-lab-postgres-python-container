@@ -88,7 +88,7 @@ pipeline {
       script {
         node {
           echo "🧹 Cleaning up temporary files..."
-          sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* /tmp/linux-amd64 || true'
+          sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* /tmp/linux-aarch64 || true'
         }
       }
     }
