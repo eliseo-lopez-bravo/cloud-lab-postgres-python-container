@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        BIN_DIR = "${WORKSPACE}/bin"
         TF_VERSION = "1.10.4"
-        KUBECTL_VERSION = "v1.30.0"
+        KUBECTL_VERSION = "v1.31.0"
         HELM_VERSION = "v3.16.2"
+        BIN_DIR = "${WORKSPACE}/bin"
+        PATH = "${BIN_DIR}:${PATH}"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git branch: 'main',
@@ -40,13 +40,14 @@ pipeline {
                     esac
                     echo "Using Terraform architecture: ${TF_ARCH}"
 
+                    echo "🧹 Cleaning old binaries..."
+                    rm -f ${BIN_DIR}/terraform ${BIN_DIR}/kubectl ${BIN_DIR}/helm
+
                     echo "=== Installing Terraform ${TF_VERSION} for ${TF_ARCH} ==="
-                    if [ ! -x "${BIN_DIR}/terraform" ]; then
-                        curl -fsSL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_${TF_ARCH}.zip -o /tmp/terraform.zip
-                        unzip -o /tmp/terraform.zip -d ${BIN_DIR}
-                        rm -f /tmp/terraform.zip
-                        chmod +x ${BIN_DIR}/terraform
-                    fi
+                    curl -fsSL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_${TF_ARCH}.zip -o /tmp/terraform.zip
+                    unzip -o /tmp/terraform.zip -d ${BIN_DIR}
+                    rm -f /tmp/terraform.zip
+                    chmod +x ${BIN_DIR}/terraform
 
                     echo "Verifying Terraform binary type..."
                     file ${BIN_DIR}/terraform || true
@@ -55,21 +56,17 @@ pipeline {
                     ${BIN_DIR}/terraform version || { echo "Terraform binary failed to execute"; exit 126; }
 
                     echo "=== Installing kubectl ${KUBECTL_VERSION} ==="
-                    if [ ! -x "${BIN_DIR}/kubectl" ]; then
-                        curl -fsSL -o ${BIN_DIR}/kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${K8S_ARCH}/kubectl
-                        chmod +x ${BIN_DIR}/kubectl
-                    fi
-                    kubectl version --client
+                    curl -fsSL -o ${BIN_DIR}/kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${K8S_ARCH}/kubectl
+                    chmod +x ${BIN_DIR}/kubectl
+                    ${BIN_DIR}/kubectl version --client
 
                     echo "=== Installing Helm ${HELM_VERSION} ==="
-                    if [ ! -x "${BIN_DIR}/helm" ]; then
-                        curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-${HELM_ARCH}.tar.gz -o /tmp/helm.tar.gz
-                        tar -xzf /tmp/helm.tar.gz -C /tmp
-                        mv /tmp/linux-${HELM_ARCH}/helm ${BIN_DIR}/helm
-                        chmod +x ${BIN_DIR}/helm
-                        rm -rf /tmp/helm.tar.gz /tmp/linux-${HELM_ARCH}
-                    fi
-                    helm version
+                    curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-${HELM_ARCH}.tar.gz -o /tmp/helm.tar.gz
+                    tar -xzf /tmp/helm.tar.gz -C /tmp
+                    mv /tmp/linux-${HELM_ARCH}/helm ${BIN_DIR}/helm
+                    chmod +x ${BIN_DIR}/helm
+                    rm -rf /tmp/helm.tar.gz /tmp/linux-${HELM_ARCH}
+                    ${BIN_DIR}/helm version
 
                     echo "✅ Lab setup completed successfully!"
                     '''
@@ -79,9 +76,23 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir('infra') {
+                script {
+                    echo "=== Initializing Terraform ==="
                     sh '''
-                    ${BIN_DIR}/terraform init -input=false
+                    cd ${WORKSPACE}/terraform
+                    terraform init -input=false
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    echo "=== Running Terraform Plan ==="
+                    sh '''
+                    cd ${WORKSPACE}/terraform
+                    terraform plan -out=tfplan
                     '''
                 }
             }
@@ -89,9 +100,11 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                dir('infra') {
+                script {
+                    echo "=== Applying Terraform ==="
                     sh '''
-                    ${BIN_DIR}/terraform apply -auto-approve -input=false
+                    cd ${WORKSPACE}/terraform
+                    terraform apply -auto-approve tfplan
                     '''
                 }
             }
@@ -99,7 +112,19 @@ pipeline {
 
         stage('Verify Setup') {
             steps {
-                echo "✅ Terraform infrastructure deployed successfully!"
+                script {
+                    echo "=== Verifying Deployment Environment ==="
+                    sh '''
+                    echo "Terraform version:"
+                    terraform version
+
+                    echo "kubectl version:"
+                    kubectl version --client
+
+                    echo "Helm version:"
+                    helm version
+                    '''
+                }
             }
         }
     }
@@ -107,7 +132,10 @@ pipeline {
     post {
         always {
             echo "🧹 Cleaning temporary files..."
-            sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-* || true'
+            sh 'rm -rf /tmp/terraform.zip /tmp/helm.tar.gz /tmp/linux-*'
+        }
+        success {
+            echo "🎉 Lab environment setup and Terraform deployment completed successfully!"
         }
         failure {
             echo "❌ Something went wrong during Lab setup."
