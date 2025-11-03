@@ -3,11 +3,6 @@ variable "tenancy_ocid" {
   type        = string
 }
 
-variable "compartment_ocid" {
-  description = "The compartment"
-  type        = string
-}
-
 variable "user_ocid" {
   description = "The OCID of the user"
   type        = string
