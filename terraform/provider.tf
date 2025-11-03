@@ -5,8 +5,17 @@ terraform {
       version = ">= 5.0.0"
     }
   }
-
   required_version = ">= 1.3.0"
+}
+
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.32.0"
+    }
+  required_version = ">= 1.4.0"
+  }
 }
 
 provider "oci" {
