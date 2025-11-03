@@ -1,60 +1,44 @@
 def setupLab(terraformVersion, helmVersion, k8sVersion) {
-  echo "🔧 Installing Terraform ${terraformVersion}, Helm ${helmVersion}, and Kubernetes ${k8sVersion}"
-
-  def binDir = env.BIN_DIR  // ✅ fix — read from Jenkins environment
-
-  sh """
-    mkdir -p ${binDir}
-    curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_linux_arm64.zip
-    unzip -o /tmp/terraform.zip -d ${binDir}
-
-    arch=\$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/')
-    curl -fsSL -o /tmp/helm.tar.gz https://get.helm.sh/helm-v${helmVersion}-linux-\${arch}.tar.gz
-    tar -xzf /tmp/helm.tar.gz -C /tmp
-    mv /tmp/linux-\${arch}/helm ${binDir}/
-
-    echo "✅ Terraform, Helm installed in ${binDir}"
-  """
+    echo "Installing Terraform ${terraformVersion}, Helm ${helmVersion}, and preparing for Kubernetes ${k8sVersion}..."
+    sh '''
+      mkdir -p ${BIN_DIR}
+      curl -Lo /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+      unzip -o /tmp/terraform.zip -d ${BIN_DIR}
+      curl -Lo /tmp/helm.tar.gz https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
+      tar -xzf /tmp/helm.tar.gz -C /tmp
+      mv /tmp/linux-amd64/helm ${BIN_DIR}/helm
+      chmod +x ${BIN_DIR}/terraform ${BIN_DIR}/helm
+    '''
 }
 
-
 def initTerraform() {
-    echo "🚀 Initializing Terraform..."
-
-    sh """
+    echo "🚀 Running terraform init..."
+    sh '''
       cd terraform
-      export TF_VAR_tenancy_ocid=$OCI_TENANCY_OCID
-      export TF_VAR_user_ocid=$OCI_USER_OCID
-      export TF_VAR_fingerprint=$OCI_FINGERPRINT
-      export TF_VAR_private_key_path=$OCI_PRIVATE_KEY_PATH
-      export TF_VAR_region=$OCI_REGION
-
       terraform init -input=false
-    """
+    '''
 }
 
 def planTerraform() {
-    echo "📋 Running Terraform plan..."
-    sh """
+    echo "📋 Running terraform plan..."
+    sh '''
       cd terraform
       terraform plan -out=tfplan -input=false
-    """
+    '''
 }
 
 def applyTerraform() {
-    echo "🚢 Applying Terraform..."
-    sh """
+    echo "🚀 Running terraform apply..."
+    sh '''
       cd terraform
-      terraform apply -auto-approve tfplan
-    """
+      terraform apply -input=false -auto-approve tfplan
+    '''
 }
 
 def verifySetup() {
-    echo "✅ Verifying Lab setup..."
-    sh """
+    echo "✅ Verifying Terraform deployment..."
+    sh '''
       cd terraform
       terraform output
-    """
+    '''
 }
-
-return this
