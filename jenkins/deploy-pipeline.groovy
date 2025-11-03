@@ -6,7 +6,7 @@ def setupLab(terraformVersion, helmVersion, k8sVersion) {
       unzip -o /tmp/terraform.zip -d ${BIN_DIR}
       curl -Lo /tmp/helm.tar.gz https://get.helm.sh/helm-v${HELM_VERSION}-linux-arm64.tar.gz
       tar -xzf /tmp/helm.tar.gz -C /tmp
-      mv /tmp/linux-amd64/helm ${BIN_DIR}/helm
+      mv /tmp/linux-arm64/helm ${BIN_DIR}/helm
       chmod +x ${BIN_DIR}/terraform ${BIN_DIR}/helm
     '''
 }
