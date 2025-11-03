@@ -15,7 +15,7 @@ terraform {
 }
 
 provider "oci" {
-  tenancy_compartment = var.tenancy_compartment
+  compartment_ocid = var.compartment_ocid
   tenancy_ocid     = var.tenancy_ocid
   user_ocid        = var.user_ocid
   fingerprint      = var.fingerprint
