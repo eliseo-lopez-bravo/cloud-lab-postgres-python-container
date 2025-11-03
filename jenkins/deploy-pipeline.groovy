@@ -42,3 +42,5 @@ def verifySetup() {
       terraform output
     '''
 }
+
+return this
