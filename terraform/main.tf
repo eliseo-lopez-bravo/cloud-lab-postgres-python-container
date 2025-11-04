@@ -116,36 +116,30 @@ resource "helm_release" "loki_stack" {
   chart      = "loki"
   version    = "6.6.5"
   namespace  = kubernetes_namespace.lab.metadata[0].name
-  wait       = false
+  wait       = true
 
   values = [<<-EOT
-singleBinary:
-  enabled: true
-  replicas: 1
-persistence:
-  enabled: false
-auth_enabled: false
-useTestSchema: true
-config: |
+loki:
+  auth_enabled: false
+  useTestSchema: true
+  persistence:
+    enabled: false
   server:
     http_listen_port: 3100
-  ingester:
-    lifecycler:
-      ring:
-        kvstore:
-          store: inmemory
-storage_config:
-  boltdb_shipper:
-    active_index_directory: /tmp/loki/index
-    cache_location: /tmp/loki/cache
-    shared_store: filesystem
-  filesystem:
-    directory: /tmp/loki/chunks
+  storage:
+    bucketNames:
+      chunks: loki-chunks
+      indexes: loki-indexes
+  limits_config:
+    enforce_metric_name: false
+  pattern_ingester:
+    enabled: false
 EOT
   ]
 
   depends_on = [kubernetes_namespace.lab]
 }
+
 
 
 
