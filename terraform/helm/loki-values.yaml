@@ -1,8 +1,58 @@
 loki:
   enabled: true
-  persistence:
-    enabled: false
+  isDefault: true
+
+  write:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  read:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  backend:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  resultsCache:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
+
+grafana:
+  enabled: false  # disable Grafana for now (can be installed separately)
 
 promtail:
   enabled: true
-  # promtail will collect logs – in a single-node lab it's fine to run it as a daemonset
+  resources:
+    limits:
+      cpu: 150m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+test_pod:
+  enabled: false

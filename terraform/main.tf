@@ -12,7 +12,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.9.0"
+      version = "~> 2.10.0"
     }
   }
 }
@@ -88,6 +88,7 @@ resource "kubernetes_deployment" "postgres" {
   }
 }
 
+# --- POSTGRES SERVICE ---
 resource "kubernetes_service" "postgres_service" {
   metadata {
     name      = "postgres-service"
@@ -106,40 +107,58 @@ resource "kubernetes_service" "postgres_service" {
 
 # --- HELM RELEASES ---
 
-# Loki + Promtail
+# Loki + Promtail (lightweight single-node setup)
 resource "helm_release" "loki_stack" {
   name       = "loki-stack"
   repository = "https://grafana.github.io/helm-charts"
-  chart      = "loki"
-  version    = "6.6.5"
+  chart      = "loki-stack"
   namespace  = kubernetes_namespace.lab.metadata[0].name
-
-  wait       = true
-  atomic     = true
-  timeout    = 600  # 10 minutes timeout
+  create_namespace = false
 
   values = [<<-EOT
 loki:
+  enabled: true
   auth_enabled: false
-  useTestSchema: true
+  singleBinary:
+    replicas: 1
   persistence:
     enabled: false
-  server:
-    http_listen_port: 3100
-  storage:
-    bucketNames:
-      chunks: loki-chunks
-      indexes: loki-indexes
-  pattern_ingester:
-    enabled: false
-  limits_config:
-    enforce_metric_name: false
+  config:
+    server:
+      http_listen_port: 3100
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+
+promtail:
+  enabled: true
+  resources:
+    limits:
+      cpu: 150m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+grafana:
+  enabled: false  # disable here to avoid duplication
+
+test_pod:
+  enabled: false
 EOT
   ]
 
+  wait    = false
+  timeout = 600
+
   depends_on = [kubernetes_namespace.lab]
 }
-
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
@@ -151,10 +170,13 @@ resource "helm_release" "prometheus_stack" {
 
   values = [file("${path.module}/helm/prometheus-values.yaml")]
 
+  wait       = false
+  timeout    = 600
+
   depends_on = [helm_release.loki_stack]
 }
 
-# Grafana
+# Grafana (standalone, lightweight)
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
@@ -163,14 +185,25 @@ resource "helm_release" "grafana" {
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
   values = [<<-EOT
-grafana:
-  enabled: true
-  adminUser: admin
-  adminPassword: admin
-  podSecurityPolicy:
-    enabled: false
+adminUser: admin
+adminPassword: admin
+persistence:
+  enabled: false
+service:
+  type: NodePort
+  nodePort: 32000
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
 EOT
   ]
+
+  wait       = false
+  timeout    = 600
 
   depends_on = [helm_release.prometheus_stack]
 }
