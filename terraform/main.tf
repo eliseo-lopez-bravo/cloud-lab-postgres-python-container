@@ -163,6 +163,16 @@ resource "helm_release" "grafana" {
   # Jenkins injects password in grafana-values.yaml dynamically
   values = [file("${path.module}/helm/grafana-values.yaml")]
 
+values = [<<-EOT
+grafana:
+  enabled: true
+  grafana:
+    adminUser: admin
+    adminPassword: admin
+  podSecurityPolicy:
+    enabled: false
+EOT
+]
   depends_on = [helm_release.prometheus_stack]
 }
 

@@ -16,6 +16,8 @@ variable "fingerprint" {
 variable "private_key_path" {
   description = "Path to the private API key file"
   type        = string
+  ephemeral = true
+
 }
 
 variable "region" {
