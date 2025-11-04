@@ -8,11 +8,6 @@ output "region" {
   value       = var.region
 }
 
-output "compartment_ocid" {
-  description = "The OCI compartment used for the deployment"
-  value       = var.compartment_ocid
-}
-
 output "postgres_namespace" {
   value = kubernetes_namespace.lab.metadata[0].name
 }
