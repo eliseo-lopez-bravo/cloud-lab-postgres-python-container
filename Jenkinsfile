@@ -76,24 +76,32 @@ pipeline {
       }
     }
 
-    stage('Create Jenkins kubeconfig from K3s') {
-      steps {
-        script {
-          echo "🗺️ Setting up kubeconfig for Jenkins user..."
-          sh '''
-            sudo mkdir -p /var/lib/jenkins/.kube
-            sudo cp ${KUBECONFIG} /var/lib/jenkins/.kube/config
-            sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube
-            KIP=$(hostname -I | awk '{print $1}')
-            if grep -q "127.0.0.1" /var/lib/jenkins/.kube/config; then
-              sudo sed -i "s/127.0.0.1/${KIP}/g" /var/lib/jenkins/.kube/config
-            fi
-            export KUBECONFIG=/var/lib/jenkins/.kube/config
-            sudo -u jenkins ${K3S_PATH} kubectl get nodes
-          '''
-        }
-      }
+stage('Create Jenkins kubeconfig from K3s') {
+  steps {
+    script {
+      echo "🗺️ Setting up kubeconfig for Jenkins user..."
+      sh '''
+        # Allow K3s kubeconfig to be readable by Jenkins
+        sudo chmod 644 /etc/rancher/k3s/k3s.yaml || true
+
+        sudo mkdir -p /var/lib/jenkins/.kube
+        sudo cp /etc/rancher/k3s/k3s.yaml /var/lib/jenkins/.kube/config
+        sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube
+
+        # Replace localhost with node IP
+        KIP=$(hostname -I | awk '{print $1}')
+        if grep -q "127.0.0.1" /var/lib/jenkins/.kube/config; then
+          sudo sed -i "s/127.0.0.1/${KIP}/g" /var/lib/jenkins/.kube/config
+        fi
+
+        export KUBECONFIG=/var/lib/jenkins/.kube/config
+        echo "✅ Validating kubeconfig..."
+        sudo -u jenkins /usr/local/bin/k3s kubectl get nodes
+      '''
     }
+  }
+}
+
 
     stage('Prepare Grafana values (secure)') {
       steps {
