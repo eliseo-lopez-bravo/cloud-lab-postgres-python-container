@@ -1,0 +1,13 @@
+# Minimal values for kube-prometheus-stack in a lab
+fullnameOverride: "prom-stack"
+prometheus:
+  prometheusSpec:
+    retention: "7d"
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+grafana:
+  enabled: false   # Grafana installed separately via grafana helm_release
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true

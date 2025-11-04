@@ -26,7 +26,6 @@ provider "oci" {
   compartment_ocid = var.compartment_ocid
 }
 
-# Kubernetes provider will use KUBECONFIG environment variable or explicit path
 provider "kubernetes" {
   config_path = var.kubeconfig_path
 }
@@ -37,14 +36,12 @@ provider "helm" {
   }
 }
 
-# Namespace
 resource "kubernetes_namespace" "lab" {
   metadata {
     name = var.namespace
   }
 }
 
-# PostgreSQL Deployment + Service (same as you had, slightly compacted)
 resource "kubernetes_deployment" "postgres" {
   metadata {
     name      = "postgres-db"
@@ -94,20 +91,22 @@ resource "kubernetes_service" "postgres_service" {
 
   spec {
     selector = { app = "postgres" }
+
     port {
       port        = 5432
       target_port = 5432
     }
+
     type = "ClusterIP"
   }
 }
 
-# Helm: install Loki stack (includes promtail) and Grafana in the lab namespace
+# Loki + promtail are installed as loki-stack via grafana helm repo
 resource "helm_release" "loki_stack" {
   name       = "loki-stack"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "loki-stack"
-  version    = "2.15.0"  # choose a compatible version or omit to pick latest
+  version    = "2.15.0"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
   values = [file("${path.module}/helm/loki-values.yaml")]
@@ -115,6 +114,7 @@ resource "helm_release" "loki_stack" {
   depends_on = [kubernetes_namespace.lab]
 }
 
+# Grafana release (values file written by Jenkins at runtime)
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
@@ -122,7 +122,21 @@ resource "helm_release" "grafana" {
   version    = "6.24.1"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
+  # Jenkins generates terraform/helm/grafana-values.yaml before plan/apply
   values = [file("${path.module}/helm/grafana-values.yaml")]
+
+  depends_on = [kubernetes_namespace.lab]
+}
+
+# Prometheus stack (kube-prometheus-stack) for metrics
+resource "helm_release" "prometheus_stack" {
+  name       = "prom-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = "45.6.0"  # pick a recent compatible version; change if needed
+  namespace  = kubernetes_namespace.lab.metadata[0].name
+
+  values = [file("${path.module}/helm/prometheus-values.yaml")]
 
   depends_on = [kubernetes_namespace.lab]
 }
@@ -135,6 +149,10 @@ output "postgres_namespace" {
   value = kubernetes_namespace.lab.metadata[0].name
 }
 
-output "compartment_ocid" {
-  value = var.compartment_ocid
+output "grafana_release_name" {
+  value = helm_release.grafana.name
+}
+
+output "prometheus_release_name" {
+  value = helm_release.prometheus_stack.name
 }

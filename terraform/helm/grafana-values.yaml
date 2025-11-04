@@ -1,5 +1,5 @@
 adminUser: admin
-adminPassword: "ChangeMeGrafana123"   # replace with secure secret in production
+adminPassword: "ChangeMeGrafana123"
 service:
   type: ClusterIP
 persistence:
