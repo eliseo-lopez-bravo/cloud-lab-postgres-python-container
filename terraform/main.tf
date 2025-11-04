@@ -113,7 +113,10 @@ resource "helm_release" "loki_stack" {
   chart      = "loki"
   version    = "6.6.5"
   namespace  = kubernetes_namespace.lab.metadata[0].name
+
   wait       = true
+  atomic     = true
+  timeout    = 600  # 10 minutes timeout
 
   values = [<<-EOT
 loki:
@@ -136,6 +139,7 @@ EOT
 
   depends_on = [kubernetes_namespace.lab]
 }
+
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
