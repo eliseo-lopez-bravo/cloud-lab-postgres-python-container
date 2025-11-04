@@ -8,7 +8,7 @@ pipeline {
     BIN_DIR           = "${WORKSPACE}/bin"
     PATH              = "${BIN_DIR}:${env.PATH}"
 
-    # TF_VARs — replace these in terraform/terraform.tfvars for production or use Jenkins Credentials
+  // TF_VARs — replace these in terraform/terraform.tfvars for production or use Jenkins Credentials
     TF_VAR_region          = 'us-sanjose-1'
     TF_VAR_tenancy_ocid    = 'ocid1.tenancy.oc1..REPLACE_ME'
     TF_VAR_user_ocid       = 'ocid1.user.oc1..REPLACE_ME'
