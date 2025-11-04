@@ -7,13 +7,14 @@ pipeline {
     K8S_VERSION       = '1.30.2'
     BIN_DIR           = "${WORKSPACE}/bin"
     PATH              = "${BIN_DIR}:${env.PATH}"
+    K3S_PATH          = '/usr/local/bin/k3s'
+    KUBECONFIG        = '/etc/rancher/k3s/k3s.yaml'
 
-    TF_VAR_region          = 'us-sanjose-1'
+    TF_VAR_region            = 'us-sanjose-1'
     TF_VAR_compartment_ocid  = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
-    TF_VAR_tenancy_ocid    = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
-    TF_VAR_user_ocid       = 'ocid1.user.oc1..aaaaaaaaz7uge6jsrevrqjdlyn7srl77oganptjtf7mft75l7gxb4spaibma'
-    TF_VAR_fingerprint     = '6f:a7:6e:df:52:3d:29:ca:1d:2b:61:00:c2:ef:42:d1'
-
+    TF_VAR_tenancy_ocid      = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
+    TF_VAR_user_ocid         = 'ocid1.user.oc1..aaaaaaaaz7uge6jsrevrqjdlyn7srl77oganptjtf7mft75l7gxb4spaibma'
+    TF_VAR_fingerprint       = '6f:a7:6e:df:52:3d:29:ca:1d:2b:61:00:c2:ef:42:d1'
   }
 
   stages {
@@ -37,43 +38,43 @@ pipeline {
       }
     }
 
-stage('Install or Verify K3s') {
-  steps {
-    script {
-      echo "🐳 Installing or verifying K3s cluster..."
-      sh '''
-        if ! command -v k3s >/dev/null 2>&1; then
-          echo "🔧 Installing K3s..."
-          curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik" sh -
-          sudo systemctl enable k3s
-          sudo systemctl start k3s
-        else
-          echo "✅ K3s already installed."
-          sudo systemctl start k3s || true
-        fi
+    stage('Install or Verify K3s') {
+      steps {
+        script {
+          echo "🐳 Installing or verifying K3s cluster..."
+          sh '''
+            if ! command -v ${K3S_PATH} >/dev/null 2>&1; then
+              echo "🔧 Installing K3s..."
+              curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik" sh -
+              sudo systemctl enable k3s
+              sudo systemctl start k3s
+            else
+              echo "✅ K3s already installed."
+              sudo systemctl start k3s || true
+            fi
 
-        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            export KUBECONFIG=${KUBECONFIG}
 
-        echo "⏳ Waiting for K3s node to be Ready..."
-        for i in {1..60}; do
-          if sudo k3s kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
-            echo "✅ K3s node is Ready!"
-            break
-          fi
-          echo "⏳ Waiting for node readiness ($i/60)..."
-          sleep 5
-        done
+            echo "⏳ Waiting for K3s node to be Ready..."
+            for i in {1..60}; do
+              if sudo ${K3S_PATH} kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
+                echo "✅ K3s node is Ready!"
+                break
+              fi
+              echo "⏳ Waiting for node readiness ($i/60)..."
+              sleep 5
+            done
 
-        if ! sudo k3s kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
-          echo "❌ ERROR: K3s node not ready after waiting."
-          sudo k3s kubectl get nodes || true
-          sudo systemctl status k3s --no-pager || true
-          exit 1
-        fi
-      '''
+            if ! sudo ${K3S_PATH} kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
+              echo "❌ ERROR: K3s node not ready after waiting."
+              sudo ${K3S_PATH} kubectl get nodes || true
+              sudo systemctl status k3s --no-pager || true
+              exit 1
+            fi
+          '''
+        }
+      }
     }
-  }
-}
 
     stage('Create Jenkins kubeconfig from K3s') {
       steps {
@@ -81,14 +82,14 @@ stage('Install or Verify K3s') {
           echo "🗺️ Setting up kubeconfig for Jenkins user..."
           sh '''
             sudo mkdir -p /var/lib/jenkins/.kube
-            sudo cp /etc/rancher/k3s/k3s.yaml /var/lib/jenkins/.kube/config
+            sudo cp ${KUBECONFIG} /var/lib/jenkins/.kube/config
             sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube
             KIP=$(hostname -I | awk '{print $1}')
             if grep -q "127.0.0.1" /var/lib/jenkins/.kube/config; then
               sudo sed -i "s/127.0.0.1/${KIP}/g" /var/lib/jenkins/.kube/config
             fi
             export KUBECONFIG=/var/lib/jenkins/.kube/config
-            sudo -u jenkins kubectl get nodes
+            sudo -u jenkins ${K3S_PATH} kubectl get nodes
           '''
         }
       }
@@ -175,7 +176,7 @@ EOF
 
     stage('Verify Setup') {
       steps {
-        sh 'sudo kubectl get pods -A'
+        sh 'sudo /usr/local/bin/k3s kubectl get pods -A'
       }
     }
   }
