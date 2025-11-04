@@ -150,7 +150,7 @@ EOF
             cd terraform
             export TF_VAR_private_key_path="${OCI_PRIVATE_KEY_PATH}"
             export KUBECONFIG=/var/lib/jenkins/.kube/config
-            terraform init -input=false
+            terraform init -input=false -upgrade
           '''
         }
       }
