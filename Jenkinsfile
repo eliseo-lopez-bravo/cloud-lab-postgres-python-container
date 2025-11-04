@@ -37,43 +37,43 @@ pipeline {
       }
     }
 
-    stage('Install or Verify K3s') {
-      steps {
-        script {
-          echo "🐳 Installing or verifying K3s cluster..."
-          sh '''
-            if ! command -v k3s >/dev/null 2>&1; then
-              echo "🔧 Installing K3s..."
-              curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik" sh -
-              sudo systemctl enable k3s
-              sudo systemctl start k3s
-            else
-              echo "✅ K3s already installed."
-              sudo systemctl start k3s || true
-            fi
+stage('Install or Verify K3s') {
+  steps {
+    script {
+      echo "🐳 Installing or verifying K3s cluster..."
+      sh '''
+        if ! command -v k3s >/dev/null 2>&1; then
+          echo "🔧 Installing K3s..."
+          curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik" sh -
+          sudo systemctl enable k3s
+          sudo systemctl start k3s
+        else
+          echo "✅ K3s already installed."
+          sudo systemctl start k3s || true
+        fi
 
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            echo "⏳ Waiting for K3s node to be Ready..."
-            for i in {1..60}; do
-              if sudo kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
-                echo "✅ K3s node is Ready!"
-                break
-              fi
-              echo "⏳ Waiting for node readiness ($i/60)..."
-              sleep 5
-            done
+        echo "⏳ Waiting for K3s node to be Ready..."
+        for i in {1..60}; do
+          if sudo k3s kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
+            echo "✅ K3s node is Ready!"
+            break
+          fi
+          echo "⏳ Waiting for node readiness ($i/60)..."
+          sleep 5
+        done
 
-            if ! sudo kubectl get nodes | grep -q ' Ready '; then
-              echo "❌ ERROR: K3s node not ready after waiting."
-              sudo kubectl get nodes || true
-              sudo systemctl status k3s --no-pager || true
-              exit 1
-            fi
-          '''
-        }
-      }
+        if ! sudo k3s kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
+          echo "❌ ERROR: K3s node not ready after waiting."
+          sudo k3s kubectl get nodes || true
+          sudo systemctl status k3s --no-pager || true
+          exit 1
+        fi
+      '''
     }
+  }
+}
 
     stage('Create Jenkins kubeconfig from K3s') {
       steps {
