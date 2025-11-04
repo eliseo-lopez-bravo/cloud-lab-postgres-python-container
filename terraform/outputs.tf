@@ -28,3 +28,13 @@ output "postgres_service_name" {
 output "prometheus_release_name" {
   value = helm_release.prometheus_stack.name
 }
+
+output "grafana_admin_password" {
+  description = "Grafana admin password (use this for login)"
+  value       = "Run: kubectl get secret --namespace ${var.namespace} grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode"
+}
+
+output "grafana_url" {
+  description = "Grafana URL (if exposed via LoadBalancer or NodePort)"
+  value       = "Run: kubectl get svc -n ${var.namespace} -l app.kubernetes.io/name=grafana"
+}

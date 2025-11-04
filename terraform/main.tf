@@ -18,7 +18,6 @@ terraform {
 }
 
 # --- PROVIDERS ---
-
 provider "oci" {
   tenancy_ocid     = var.tenancy_ocid
   user_ocid        = var.user_ocid
@@ -39,7 +38,6 @@ provider "helm" {
 }
 
 # --- NAMESPACE ---
-
 resource "kubernetes_namespace" "lab" {
   metadata {
     name = var.namespace
@@ -47,7 +45,6 @@ resource "kubernetes_namespace" "lab" {
 }
 
 # --- POSTGRES DEPLOYMENT ---
-
 resource "kubernetes_deployment" "postgres" {
   metadata {
     name      = "postgres-db"
@@ -130,18 +127,15 @@ loki:
     bucketNames:
       chunks: loki-chunks
       indexes: loki-indexes
-  limits_config:
-    enforce_metric_name: false
   pattern_ingester:
     enabled: false
+  limits_config:
+    enforce_metric_name: false
 EOT
   ]
 
   depends_on = [kubernetes_namespace.lab]
 }
-
-
-
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
@@ -161,33 +155,18 @@ resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
-  version    = "9.8.2"
+  version    = "6.24.1"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
-  values = [
-    file("${path.module}/helm/grafana-values.yaml"),
-    <<-EOT
+  values = [<<-EOT
 grafana:
+  enabled: true
   adminUser: admin
   adminPassword: admin
-podSecurityPolicy:
-  enabled: false
-service:
-  type: ClusterIP
+  podSecurityPolicy:
+    enabled: false
 EOT
   ]
 
   depends_on = [helm_release.prometheus_stack]
-}
-
-# --- OUTPUTS ---
-
-output "grafana_admin_password" {
-  description = "Grafana admin password (use this for login)"
-  value       = helm_release.grafana.metadata[0].name != "" ? "Run: kubectl get secret --namespace ${var.namespace} grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode" : ""
-}
-
-output "grafana_url" {
-  description = "Grafana URL (if exposed via LoadBalancer or NodePort)"
-  value       = "Run: kubectl get svc -n ${var.namespace} -l app.kubernetes.io/name=grafana"
 }
