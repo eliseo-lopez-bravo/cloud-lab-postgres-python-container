@@ -141,18 +141,3 @@ resource "helm_release" "prometheus_stack" {
   depends_on = [kubernetes_namespace.lab]
 }
 
-output "postgres_service_name" {
-  value = kubernetes_service.postgres_service.metadata[0].name
-}
-
-output "postgres_namespace" {
-  value = kubernetes_namespace.lab.metadata[0].name
-}
-
-output "grafana_release_name" {
-  value = helm_release.grafana.name
-}
-
-output "prometheus_release_name" {
-  value = helm_release.prometheus_stack.name
-}

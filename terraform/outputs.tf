@@ -20,3 +20,11 @@ output "grafana_release_name" {
 output "loki_release_name" {
   value = helm_release.loki_stack.name
 }
+
+output "postgres_service_name" {
+  value = kubernetes_service.postgres_service.metadata[0].name
+}
+
+output "prometheus_release_name" {
+  value = helm_release.prometheus_stack.name
+}
