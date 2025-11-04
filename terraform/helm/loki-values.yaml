@@ -1,0 +1,8 @@
+loki:
+  enabled: true
+  persistence:
+    enabled: false
+promtail:
+  enabled: true
+  # promtail will collect logs from nodes. In k3s single-node lab this is useful.
+  # In production, configure relabel_configs and proper persistence

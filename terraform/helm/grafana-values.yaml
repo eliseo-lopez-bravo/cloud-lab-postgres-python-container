@@ -1,0 +1,10 @@
+adminUser: admin
+adminPassword: "ChangeMeGrafana123"   # replace with secure secret in production
+service:
+  type: ClusterIP
+persistence:
+  enabled: false
+ingress:
+  enabled: false
+security:
+  enabled: false

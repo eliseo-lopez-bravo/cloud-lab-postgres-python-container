@@ -12,3 +12,16 @@ output "compartment_ocid" {
   description = "The OCI compartment used for the deployment"
   value       = var.compartment_ocid
 }
+
+output "postgres_namespace" {
+  value = kubernetes_namespace.lab.metadata[0].name
+}
+
+# Grafana service (helm chart exposes service name)
+output "grafana_release_name" {
+  value = helm_release.grafana.name
+}
+
+output "loki_release_name" {
+  value = helm_release.loki_stack.name
+}

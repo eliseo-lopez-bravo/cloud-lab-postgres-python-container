@@ -29,6 +29,12 @@ variable "compartment_ocid" {
   type        = string
 }
 
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig for the Kubernetes provider"
+  type = string
+  default = "/var/lib/jenkins/.kube/config"
+}
+
 variable "namespace" {
   description = "Kubernetes namespace for the lab"
   type        = string
@@ -48,10 +54,10 @@ variable "postgres_user" {
 }
 
 variable "postgres_password" {
-  description = "PostgreSQL password"
-  type        = string
-  default     = "password123"
-  sensitive   = true
+  description = "Postgres admin password (use tfvars or secrets, do not commit)"
+  type = string
+  sensitive = true
+  default = "ChangeMe123!"
 }
 
 variable "postgres_db" {
