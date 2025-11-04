@@ -134,11 +134,19 @@ config: |
       ring:
         kvstore:
           store: inmemory
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /tmp/loki/index
+    cache_location: /tmp/loki/cache
+    shared_store: filesystem
+  filesystem:
+    directory: /tmp/loki/chunks
 EOT
   ]
 
   depends_on = [kubernetes_namespace.lab]
 }
+
 
 
 # Prometheus stack
