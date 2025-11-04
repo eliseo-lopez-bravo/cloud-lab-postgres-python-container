@@ -17,6 +17,8 @@ terraform {
   }
 }
 
+# --- PROVIDERS ---
+
 provider "oci" {
   tenancy_ocid     = var.tenancy_ocid
   user_ocid        = var.user_ocid
@@ -36,11 +38,15 @@ provider "helm" {
   }
 }
 
+# --- NAMESPACE ---
+
 resource "kubernetes_namespace" "lab" {
   metadata {
     name = var.namespace
   }
 }
+
+# --- POSTGRES DEPLOYMENT ---
 
 resource "kubernetes_deployment" "postgres" {
   metadata {
@@ -61,6 +67,7 @@ resource "kubernetes_deployment" "postgres" {
           name  = "postgres"
           image = var.postgres_image
           port { container_port = 5432 }
+
           env {
             name  = "POSTGRES_USER"
             value = var.postgres_user
@@ -73,8 +80,9 @@ resource "kubernetes_deployment" "postgres" {
             name  = "POSTGRES_DB"
             value = var.postgres_db
           }
+
           resources {
-            limits = { cpu = "500m", memory = "512Mi" }
+            limits   = { cpu = "500m", memory = "512Mi" }
             requests = { cpu = "250m", memory = "256Mi" }
           }
         }
@@ -91,17 +99,17 @@ resource "kubernetes_service" "postgres_service" {
 
   spec {
     selector = { app = "postgres" }
-
     port {
       port        = 5432
       target_port = 5432
     }
-
     type = "ClusterIP"
   }
 }
 
-# Loki + promtail are installed as loki-stack via grafana helm repo
+# --- HELM RELEASES ---
+
+# Loki + promtail
 resource "helm_release" "loki_stack" {
   name       = "loki-stack"
   repository = "https://grafana.github.io/helm-charts"
@@ -114,7 +122,20 @@ resource "helm_release" "loki_stack" {
   depends_on = [kubernetes_namespace.lab]
 }
 
-# Grafana release (values file written by Jenkins at runtime)
+# Prometheus stack
+resource "helm_release" "prometheus_stack" {
+  name       = "prom-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = "45.6.0"
+  namespace  = kubernetes_namespace.lab.metadata[0].name
+
+  values = [file("${path.module}/helm/prometheus-values.yaml")]
+
+  depends_on = [helm_release.loki_stack]
+}
+
+# Grafana
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
@@ -122,22 +143,19 @@ resource "helm_release" "grafana" {
   version    = "6.24.1"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
-  # Jenkins generates terraform/helm/grafana-values.yaml before plan/apply
   values = [file("${path.module}/helm/grafana-values.yaml")]
 
-  depends_on = [kubernetes_namespace.lab]
+  depends_on = [helm_release.prometheus_stack]
 }
 
-# Prometheus stack (kube-prometheus-stack) for metrics
-resource "helm_release" "prometheus_stack" {
-  name       = "prom-stack"
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "kube-prometheus-stack"
-  version    = "45.6.0"  # pick a recent compatible version; change if needed
-  namespace  = kubernetes_namespace.lab.metadata[0].name
+# --- OUTPUTS ---
 
-  values = [file("${path.module}/helm/prometheus-values.yaml")]
-
-  depends_on = [kubernetes_namespace.lab]
+output "grafana_admin_password" {
+  description = "Grafana admin password (use this for login)"
+  value       = helm_release.grafana.metadata[0].name != "" ? "Run: kubectl get secret --namespace ${var.namespace} grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode" : ""
 }
 
+output "grafana_url" {
+  description = "Grafana URL (if exposed via LoadBalancer or NodePort)"
+  value       = "Run: kubectl get svc -n ${var.namespace} -l app.kubernetes.io/name=grafana"
+}
