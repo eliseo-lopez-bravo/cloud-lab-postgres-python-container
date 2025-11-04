@@ -109,49 +109,56 @@ resource "kubernetes_service" "postgres_service" {
 
 # --- HELM RELEASES ---
 
-# Loki + promtail
+# Loki + Promtail
 resource "helm_release" "loki_stack" {
-  name       = "loki"
-  repository = "https://grafana.github.io/helm-charts"
-  chart      = "loki"
-  namespace  = kubernetes_namespace.lab.metadata[0].name
-  version    = "6.6.5"
+  name             = "loki"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "loki"
+  version          = "6.6.5"
+  namespace        = kubernetes_namespace.lab.metadata[0].name
   create_namespace = false
-  wait = true
+  wait             = true
 
-values = [<<-EOT
-  loki:
-    auth_enabled: false
-    config: |
+  # Add this set block to enable test schema mode (avoids schema_config errors)
+  set {
+    name  = "loki.useTestSchema"
+    value = "true"
+  }
+
+  values = [<<-EOT
+    loki:
       auth_enabled: false
-      server:
-        http_listen_port: 3100
-      common:
-        path_prefix: /tmp/loki
-        storage:
-          filesystem:
-            chunks_directory: /tmp/loki/chunks
-            rules_directory: /tmp/loki/rules
-      schema_config:
-        configs:
-          - from: 2020-10-24
-            store: boltdb-shipper
-            object_store: filesystem
-            schema: v11
-            index:
-              prefix: index_
-              period: 24h
-      storage_config:
-        boltdb_shipper:
-          active_index_directory: /tmp/loki/index
-          cache_location: /tmp/loki/cache
-          shared_store: filesystem
-  promtail:
-    enabled: true
-EOT
-]
-}
+      config: |
+        auth_enabled: false
+        server:
+          http_listen_port: 3100
+        common:
+          path_prefix: /tmp/loki
+          storage:
+            filesystem:
+              chunks_directory: /tmp/loki/chunks
+              rules_directory: /tmp/loki/rules
+        schema_config:
+          configs:
+            - from: 2020-10-24
+              store: boltdb-shipper
+              object_store: filesystem
+              schema: v11
+              index:
+                prefix: index_
+                period: 24h
+        storage_config:
+          boltdb_shipper:
+            active_index_directory: /tmp/loki/index
+            cache_location: /tmp/loki/cache
+            shared_store: filesystem
+    promtail:
+      enabled: true
+  EOT
+  ]
 
+  depends_on = [kubernetes_namespace.lab]
+}
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
@@ -174,6 +181,7 @@ resource "helm_release" "grafana" {
   version    = "6.24.1"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
+  # Jenkins injects password in grafana-values.yaml dynamically
   values = [file("${path.module}/helm/grafana-values.yaml")]
 
   depends_on = [helm_release.prometheus_stack]
