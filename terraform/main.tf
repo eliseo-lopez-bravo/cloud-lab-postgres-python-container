@@ -134,9 +134,6 @@ loki:
         ring:
           kvstore:
             store: inmemory
-  storage:
-    filesystem:
-      directory: /tmp/loki/chunks
 EOT
 ]
   depends_on = [kubernetes_namespace.lab]
