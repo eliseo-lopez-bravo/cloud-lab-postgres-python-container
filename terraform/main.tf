@@ -114,22 +114,42 @@ resource "helm_release" "loki_stack" {
   name       = "loki"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "loki"
-  version    = "6.6.5"
   namespace  = kubernetes_namespace.lab.metadata[0].name
+  version    = "6.6.5"
+  create_namespace = false
+  wait = true
 
-  values = [<<EOF
-loki:
-  auth_enabled: false
-  commonConfig:
-    replication_factor: 1
-  storage:
-    type: filesystem
-  persistence:
-    enabled: false
+  values = [<<-EOT
+    loki:
+      auth_enabled: false
+      commonConfig:
+        replication_factor: 1
+      storageConfig:
+        boltdb_shipper:
+          active_index_directory: /data/loki/index
+          cache_location: /data/loki/cache
+          shared_store: filesystem
+        filesystem:
+          directory: /data/loki/chunks
+      schemaConfig:
+        configs:
+          - from: 2020-10-24
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h
+      compactor:
+        working_directory: /data/loki/compactor
+        shared_store: filesystem
+      persistence:
+        enabled: false
+      singleBinary: true
 
-promtail:
-  enabled: true
-EOF
+    promtail:
+      enabled: true
+  EOT
   ]
 }
 
