@@ -116,38 +116,42 @@ resource "helm_release" "loki_stack" {
   chart      = "loki"
   version    = "6.6.5"
   namespace  = kubernetes_namespace.lab.metadata[0].name
-  wait       = false  # Don’t block Terraform
+  wait       = false
 
   values = [<<-EOT
-    singleBinary:
-      replicas: 1
-    persistence:
-      enabled: false
-    auth_enabled: false
-    config:
-      server:
-        http_listen_port: 3100
-      ingester:
-        lifecycler:
-          ring:
-            kvstore:
-              store: inmemory
-      schema_config:
-        configs:
-          - from: 2020-10-24
-            store: boltdb-shipper
-            object_store: filesystem
-            schema: v11
-            index:
-              prefix: index_
-              period: 24h
-      storage_config:
-        boltdb_shipper:
-          active_index_directory: /tmp/loki/index
-          cache_location: /tmp/loki/cache
-          shared_store: filesystem
-        filesystem:
-          directory: /tmp/loki/chunks
+loki:
+  singleBinary:
+    replicas: 1
+  persistence:
+    enabled: false
+  auth_enabled: false
+  config:
+    server:
+      http_listen_port: 3100
+    ingester:
+      lifecycler:
+        ring:
+          kvstore:
+            store: inmemory
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+  storage:
+    bucketNames:
+      chunks: "loki-chunks"
+      index: "loki-index"
+    filesystem:
+      directory: /tmp/loki/chunks
+    boltdb_shipper:
+      active_index_directory: /tmp/loki/index
+      cache_location: /tmp/loki/cache
+      shared_store: filesystem
   EOT
   ]
   depends_on = [kubernetes_namespace.lab]
