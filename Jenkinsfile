@@ -10,7 +10,7 @@ pipeline {
 
     // OCI and Terraform variables
     TF_VAR_region          = 'us-sanjose-1'
-    TF_VAR_tenancy_compartment  = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
+    TF_VAR_compartment_ocid  = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
     TF_VAR_tenancy_ocid    = 'ocid1.tenancy.oc1..aaaaaaaad4ipuawmwb2miwp3bosu6i6ufmkkbvh572ceabiesraziz6zhb7q'
     TF_VAR_user_ocid       = 'ocid1.user.oc1..aaaaaaaaz7uge6jsrevrqjdlyn7srl77oganptjtf7mft75l7gxb4spaibma'
     TF_VAR_fingerprint     = '6f:a7:6e:df:52:3d:29:ca:1d:2b:61:00:c2:ef:42:d1'
