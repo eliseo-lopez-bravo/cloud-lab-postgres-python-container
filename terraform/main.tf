@@ -111,16 +111,28 @@ resource "kubernetes_service" "postgres_service" {
 
 # Loki + promtail
 resource "helm_release" "loki_stack" {
-  name       = "loki-stack"
+  name       = "loki"
   repository = "https://grafana.github.io/helm-charts"
-  chart      = "loki-stack"
-  version    = "2.15.0"
+  chart      = "loki"
+  version    = "6.6.5"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
-  values = [file("${path.module}/helm/loki-values.yaml")]
+  values = [<<EOF
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  persistence:
+    enabled: false
 
-  depends_on = [kubernetes_namespace.lab]
+promtail:
+  enabled: true
+EOF
+  ]
 }
+
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
