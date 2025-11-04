@@ -111,52 +111,45 @@ resource "kubernetes_service" "postgres_service" {
 
 # Loki + Promtail
 resource "helm_release" "loki_stack" {
-  name             = "loki"
-  repository       = "https://grafana.github.io/helm-charts"
-  chart            = "loki"
-  version          = "6.6.5"
-  namespace        = kubernetes_namespace.lab.metadata[0].name
-  create_namespace = false
-  wait             = true
-
-  # Add this set block to enable test schema mode (avoids schema_config errors)
-  set {
-    name  = "loki.useTestSchema"
-    value = "true"
-  }
+  name       = "loki-stack"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "loki"
+  version    = "6.6.5"
+  namespace  = kubernetes_namespace.lab.metadata[0].name
+  wait       = false  # Don’t block Terraform
 
   values = [<<-EOT
-    loki:
-      auth_enabled: false
-      config: |
-        auth_enabled: false
-        server:
-          http_listen_port: 3100
-        common:
-          path_prefix: /tmp/loki
-          storage:
-            filesystem:
-              chunks_directory: /tmp/loki/chunks
-              rules_directory: /tmp/loki/rules
-        schema_config:
-          configs:
-            - from: 2020-10-24
-              store: boltdb-shipper
-              object_store: filesystem
-              schema: v11
-              index:
-                prefix: index_
-                period: 24h
-        storage_config:
-          boltdb_shipper:
-            active_index_directory: /tmp/loki/index
-            cache_location: /tmp/loki/cache
-            shared_store: filesystem
-    promtail:
-      enabled: true
+    singleBinary:
+      replicas: 1
+    persistence:
+      enabled: false
+    auth_enabled: false
+    config:
+      server:
+        http_listen_port: 3100
+      ingester:
+        lifecycler:
+          ring:
+            kvstore:
+              store: inmemory
+      schema_config:
+        configs:
+          - from: 2020-10-24
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h
+      storage_config:
+        boltdb_shipper:
+          active_index_directory: /tmp/loki/index
+          cache_location: /tmp/loki/cache
+          shared_store: filesystem
+        filesystem:
+          directory: /tmp/loki/chunks
   EOT
   ]
-
   depends_on = [kubernetes_namespace.lab]
 }
 
