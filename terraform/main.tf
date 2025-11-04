@@ -120,6 +120,7 @@ resource "helm_release" "loki_stack" {
 
   values = [<<-EOT
 singleBinary:
+  enabled: true
   replicas: 1
 persistence:
   enabled: false
@@ -138,6 +139,7 @@ EOT
 
   depends_on = [kubernetes_namespace.lab]
 }
+
 
 # Prometheus stack
 resource "helm_release" "prometheus_stack" {
