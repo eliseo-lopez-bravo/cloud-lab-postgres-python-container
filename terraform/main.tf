@@ -125,6 +125,7 @@ loki:
   persistence:
     enabled: false
   auth_enabled: false
+  useTestSchema: true
   config: |
     server:
       http_listen_port: 3100
@@ -133,25 +134,9 @@ loki:
         ring:
           kvstore:
             store: inmemory
-    schema_config:
-      configs:
-        - from: 2020-10-24
-          store: boltdb-shipper
-          object_store: filesystem
-          schema: v11
-          index:
-            prefix: index_
-            period: 24h
   storage:
-    bucketNames:
-      chunks: "loki-chunks"
-      index: "loki-index"
     filesystem:
       directory: /tmp/loki/chunks
-    boltdb_shipper:
-      active_index_directory: /tmp/loki/index
-      cache_location: /tmp/loki/cache
-      shared_store: filesystem
 EOT
 ]
   depends_on = [kubernetes_namespace.lab]
