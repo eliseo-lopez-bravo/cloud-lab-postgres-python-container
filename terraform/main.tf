@@ -52,7 +52,7 @@ resource "kubernetes_deployment" "postgres" {
   metadata {
     name      = "postgres-db"
     namespace = kubernetes_namespace.lab.metadata[0].name
-    labels = { app = "postgres" }
+    labels    = { app = "postgres" }
   }
 
   spec {
@@ -118,24 +118,24 @@ resource "helm_release" "loki_stack" {
   namespace  = kubernetes_namespace.lab.metadata[0].name
   wait       = false
 
-values = [<<-EOT
-loki:
-  singleBinary:
-    replicas: 1
-  persistence:
-    enabled: false
-  auth_enabled: false
-  useTestSchema: true
-  config: |
-    server:
-      http_listen_port: 3100
-    ingester:
-      lifecycler:
-        ring:
-          kvstore:
-            store: inmemory
+  values = [<<-EOT
+singleBinary:
+  replicas: 1
+persistence:
+  enabled: false
+auth_enabled: false
+useTestSchema: true
+config: |
+  server:
+    http_listen_port: 3100
+  ingester:
+    lifecycler:
+      ring:
+        kvstore:
+          store: inmemory
 EOT
-]
+  ]
+
   depends_on = [kubernetes_namespace.lab]
 }
 
@@ -157,22 +157,22 @@ resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
-  version    = "6.24.1"
+  version    = "9.8.2"
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
-  # Jenkins injects password in grafana-values.yaml dynamically
-  values = [file("${path.module}/helm/grafana-values.yaml")]
-
-values = [<<-EOT
+  values = [
+    file("${path.module}/helm/grafana-values.yaml"),
+    <<-EOT
 grafana:
-  enabled: true
-  grafana:
-    adminUser: admin
-    adminPassword: admin
-  podSecurityPolicy:
-    enabled: false
+  adminUser: admin
+  adminPassword: admin
+podSecurityPolicy:
+  enabled: false
+service:
+  type: ClusterIP
 EOT
-]
+  ]
+
   depends_on = [helm_release.prometheus_stack]
 }
 
