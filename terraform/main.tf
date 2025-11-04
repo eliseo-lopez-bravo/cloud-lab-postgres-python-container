@@ -119,19 +119,20 @@ resource "helm_release" "loki_stack" {
   create_namespace = false
   wait = true
 
-  values = [<<-EOT
-    loki:
+values = [<<-EOT
+  loki:
+    auth_enabled: false
+    config: |
       auth_enabled: false
-      commonConfig:
-        replication_factor: 1
-      storageConfig:
-        boltdb_shipper:
-          active_index_directory: /data/loki/index
-          cache_location: /data/loki/cache
-          shared_store: filesystem
-        filesystem:
-          directory: /data/loki/chunks
-      schemaConfig:
+      server:
+        http_listen_port: 3100
+      common:
+        path_prefix: /tmp/loki
+        storage:
+          filesystem:
+            chunks_directory: /tmp/loki/chunks
+            rules_directory: /tmp/loki/rules
+      schema_config:
         configs:
           - from: 2020-10-24
             store: boltdb-shipper
@@ -140,17 +141,15 @@ resource "helm_release" "loki_stack" {
             index:
               prefix: index_
               period: 24h
-      compactor:
-        working_directory: /data/loki/compactor
-        shared_store: filesystem
-      persistence:
-        enabled: false
-      singleBinary: true
-
-    promtail:
-      enabled: true
-  EOT
-  ]
+      storage_config:
+        boltdb_shipper:
+          active_index_directory: /tmp/loki/index
+          cache_location: /tmp/loki/cache
+          shared_store: filesystem
+  promtail:
+    enabled: true
+EOT
+]
 }
 
 
