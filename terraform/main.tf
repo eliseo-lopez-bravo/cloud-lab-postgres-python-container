@@ -118,14 +118,14 @@ resource "helm_release" "loki_stack" {
   namespace  = kubernetes_namespace.lab.metadata[0].name
   wait       = false
 
-  values = [<<-EOT
+values = [<<-EOT
 loki:
   singleBinary:
     replicas: 1
   persistence:
     enabled: false
   auth_enabled: false
-  config:
+  config: |
     server:
       http_listen_port: 3100
     ingester:
@@ -152,8 +152,8 @@ loki:
       active_index_directory: /tmp/loki/index
       cache_location: /tmp/loki/cache
       shared_store: filesystem
-  EOT
-  ]
+EOT
+]
   depends_on = [kubernetes_namespace.lab]
 }
 
