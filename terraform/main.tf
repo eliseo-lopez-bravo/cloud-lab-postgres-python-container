@@ -176,31 +176,42 @@ resource "helm_release" "prometheus_stack" {
   depends_on = [helm_release.loki_stack]
 }
 
-# Grafana (standalone, lightweight)
+# Grafana (standalone, lightweight, K3s-compatible)
 resource "helm_release" "grafana" {
   name       = "grafana"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
-  version    = "6.24.1"
+  version    = "8.5.11" # PSP-free; safe for K8s 1.25+ (you can also check for newer versions)
   namespace  = kubernetes_namespace.lab.metadata[0].name
 
-  values = [<<-EOT
-adminUser: admin
-adminPassword: admin
-persistence:
-  enabled: false
-service:
-  type: NodePort
-  nodePort: 32000
-resources:
-  limits:
-    cpu: 250m
-    memory: 256Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
-EOT
-  ]
+  values = [yamlencode({
+    adminUser     = "admin"
+    adminPassword = "admin"
+
+    persistence = {
+      enabled = false
+    }
+
+    service = {
+      type     = "NodePort"
+      nodePort = 32000
+    }
+
+    rbac = {
+      pspEnabled = false   # ✅ disables PodSecurityPolicy creation
+    }
+
+    resources = {
+      limits = {
+        cpu    = "250m"
+        memory = "256Mi"
+      }
+      requests = {
+        cpu    = "100m"
+        memory = "128Mi"
+      }
+    }
+  })]
 
   wait       = false
   timeout    = 600
